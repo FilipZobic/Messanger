@@ -8,8 +8,69 @@
 import UIKit
 import FirebaseAuth
 import FBSDKLoginKit
+import GoogleSignIn
+import Firebase
 
 class LoginViewController: UIViewController {
+    
+    @objc func setupGoogleLogin() {
+        
+        guard let clientID: String = FirebaseApp.app()?.options.clientID else {
+            return
+        }
+
+        // Create Google Sign In configuration object.
+        let config = GIDConfiguration(clientID: clientID)
+
+        // Start the sign in flow!
+        GIDSignIn.sharedInstance.signIn(with: config, presenting: self) { [unowned self] user, error in
+
+            guard error == nil else {
+                return
+            }
+            
+            guard let user = user else {
+                return
+            }
+            
+            let authentication = user.authentication
+            
+            guard let idToken = authentication.idToken, let profile = user.profile else {
+                return
+            }
+            
+          let credential = GoogleAuthProvider.credential(withIDToken: idToken,
+                                                         accessToken: authentication.accessToken)
+
+            let emailAddress = profile.email
+            let fullName = profile.name
+            DatabaseManager.shared.userExists(with: emailAddress, completion: {exists in
+                if !exists {
+                    print("User does not exist")
+                    
+                    guard let firstName = profile.givenName,
+                          let lastName = profile.familyName else {
+                              return
+                          }
+                    DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: emailAddress))
+                }
+            })
+            
+          print("Google auth works \(credential) \(emailAddress) \(fullName)")
+            
+            FirebaseAuth.Auth.auth().signIn(with: credential, completion: {[weak self] authResults, error in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard authResults != nil, error == nil else {
+                    print("Failed loggin in with google credentials")
+                    return
+                }
+                print("Signed in with google")
+                strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+            })
+        }
+    }
     
     private let scrollView: UIScrollView = {
        let scrollView = UIScrollView()
@@ -73,9 +134,15 @@ class LoginViewController: UIViewController {
         button.permissions = ["public_profile", "email"]
         return button
     }()
+    
+    private let googleLoginButton: GIDSignInButton = {
+        let button = GIDSignInButton()
+        return button
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         title = "Log In"
         view.backgroundColor = .white
         
@@ -83,6 +150,7 @@ class LoginViewController: UIViewController {
                                                             action: #selector(didTapRegister))
         
         loginButton.addTarget(self, action: #selector(loginButtonTapped), for: .touchUpInside)
+        googleLoginButton.addTarget(self, action: #selector(setupGoogleLogin), for: .touchUpInside)
         
         emailField.delegate = self
         passwordField.delegate = self
@@ -96,6 +164,7 @@ class LoginViewController: UIViewController {
         scrollView.addSubview(passwordField)
         scrollView.addSubview(loginButton)
         scrollView.addSubview(facebookLoginButton)
+        scrollView.addSubview(googleLoginButton)
     }
     
     override func viewDidLayoutSubviews() {
@@ -121,6 +190,10 @@ class LoginViewController: UIViewController {
                                   width: scrollView.width-60,
                                   height: 52)
         facebookLoginButton.frame.origin.y = loginButton.bottom+20
+        googleLoginButton.frame = CGRect(x: 30,
+                                  y: facebookLoginButton.bottom+10,
+                                  width: scrollView.width-60,
+                                  height: 52)
     }
     
     @objc private func loginButtonTapped() {
