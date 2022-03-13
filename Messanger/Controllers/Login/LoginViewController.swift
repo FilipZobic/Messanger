@@ -10,8 +10,11 @@ import FirebaseAuth
 import FBSDKLoginKit
 import GoogleSignIn
 import Firebase
+import JGProgressHUD
 
 class LoginViewController: UIViewController {
+    
+    private let spinner = JGProgressHUD(style: .dark)
     
     @objc func setupGoogleLogin() {
         
@@ -206,11 +209,16 @@ class LoginViewController: UIViewController {
                   alertUserLoginerror()
                   return
               }
-        
+        spinner.show(in: view)
         FirebaseAuth.Auth.auth().signIn(withEmail: email, password: password, completion: {[weak self] authResults, error in
             guard let strongSelf = self else {
                 return
             }
+            
+            DispatchQueue.main.async {
+                strongSelf.spinner.dismiss()
+            }
+            
             guard let result = authResults, error == nil else {
                 print("Failed to login with email: \(email)")
                 return
@@ -300,7 +308,6 @@ extension LoginViewController: LoginButtonDelegate {
                 }
                 
                 guard authResult != nil, error == nil else {
-                    
                     print("Facebook credential login failed, MFA may be needed")
                     return
                 }
