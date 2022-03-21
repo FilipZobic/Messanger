@@ -47,6 +47,7 @@ class LoginViewController: UIViewController {
 
             let emailAddress = profile.email
             let fullName = profile.name
+            UserDefaults.standard.set(emailAddress, forKey: "email")
             DatabaseManager.shared.userExists(with: emailAddress, completion: {exists in
                 if !exists {
                     print("User does not exist")
@@ -55,7 +56,34 @@ class LoginViewController: UIViewController {
                           let lastName = profile.familyName else {
                               return
                           }
-                    DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: emailAddress))
+                    let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: emailAddress)
+                    DatabaseManager.shared.insertUser(with: chatUser, completion: {success in
+                        if success {
+                            // upload image
+                            
+                            if profile.hasImage {
+                                guard let url = user.profile?.imageURL(withDimension: 200) else {
+                                    return
+                                }
+                                URLSession.shared.dataTask(with: url, completionHandler: {data, _, _ in
+                                    guard let data = data else {
+                                        return
+                                    }
+                
+                                    let fileName = chatUser.profilePictureFileName
+                                    StorageManager.shared.uploadProfilePicture(with: data, fileName: fileName, completion: { result in
+                                        switch result {
+                                        case .success(let downloadUrl):
+                                            UserDefaults.standard.set(downloadUrl, forKey: "profile_picture_url")
+                                            print(downloadUrl)
+                                        case .failure(let error):
+                                            print("Error: \(error)")
+                                        }
+                                    })
+                                }).resume()
+                            }
+                        }
+                    })
                 }
             })
             
@@ -224,6 +252,9 @@ class LoginViewController: UIViewController {
                 return
             }
             let user = result.user
+            
+            UserDefaults.standard.set(email, forKey: "email")
+            
             print("Logged In User: \(user)")
             strongSelf.navigationController?.dismiss(animated: true, completion: nil)
         })
@@ -269,7 +300,7 @@ extension LoginViewController: LoginButtonDelegate {
         
         let facebookRequest = FBSDKLoginKit.GraphRequest(
             graphPath: "me",
-            parameters: ["fields": "email, name"],
+            parameters: ["fields": "email, first_name, last_name, picture.type(large)"],
             tokenString: token,
             version: nil,
             httpMethod: .get)
@@ -283,21 +314,45 @@ extension LoginViewController: LoginButtonDelegate {
             print("\(result)")
             
             guard
-                let userName = result["name"] as? String,
-                let email = result["email"] as? String else {
+                let firstName = result["first_name"] as? String,
+                let lastName = result["last_name"] as? String,
+                let email = result["email"] as? String,
+                let picture = result["picture"] as? [String: Any],
+                let data = picture["data"] as? [String: Any],
+                let pictureUrl = data["url"] as? String else {
                     print("Failed to get email and name from fb result")
                     return
                 }
-            let nameComponents = userName.components(separatedBy: " ")
-            guard nameComponents.count == 2 else {
-                return
-            }
-            let firstName = nameComponents[0]
-            let lastName = nameComponents[1]
+            UserDefaults.standard.set(email, forKey: "email")
             
             DatabaseManager.shared.userExists(with: email, completion: {exists in
                 if !exists {
-                    DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email))
+                    let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email)
+                    DatabaseManager.shared.insertUser(with: chatUser, completion: {success in
+                        if success {
+                            
+                            guard let url = URL(string: pictureUrl) else {
+                                return
+                            }
+                            
+                            URLSession.shared.dataTask(with: url, completionHandler: { data, _, error in
+                                guard let data = data else {
+                                    return
+                                }
+                                
+                                let fileName = chatUser.profilePictureFileName
+                                StorageManager.shared.uploadProfilePicture(with: data, fileName: fileName, completion: { result in
+                                    switch result {
+                                    case .success(let downloadUrl):
+                                        UserDefaults.standard.set(downloadUrl, forKey: "profile_picture_url")
+                                        print(downloadUrl)
+                                    case .failure(let error):
+                                        print("Error: \(error)")
+                                    }
+                                })
+                            }).resume()
+                        }
+                    })
                 }
             })
             
