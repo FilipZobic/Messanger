@@ -215,6 +215,8 @@ class RegisterViewController: UIViewController {
                     print("Error creating user")
                     return
                 }
+                UserDefaults.standard.setValue(email, forKey: "email")
+                UserDefaults.standard.setValue("\(firstName) \(lastName)", forKey: "name")
                 
                 let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email)
                 DatabaseManager.shared.insertUser(with: chatUser, completion: {success in
@@ -235,6 +237,7 @@ class RegisterViewController: UIViewController {
                         })
                     }
                 })
+                NotificationCenter.default.post(name: .didLogInNotification, object: nil)
                 strongSelf.navigationController?.dismiss(animated: true, completion: nil)
             })
         })

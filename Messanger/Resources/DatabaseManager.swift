@@ -20,7 +20,9 @@ final class DatabaseManager {
 
 extension DatabaseManager {
     public func getDataFor(path: String, completion: @escaping (Result<Any, Error>) -> Void) {
-        self.database.child("(\(path)").observeSingleEvent(of: .value) { snapshot in
+        self.database.child("\(path)").observeSingleEvent(of: .value) { snapshot in
+            print(path)
+            print(snapshot)
             guard let value = snapshot.value else {
                 completion(.failure(DatabaseError.failedToFetch))
                 return
@@ -87,7 +89,7 @@ extension DatabaseManager {
         safeEmail = safeEmail.replacingOccurrences(of: "@", with: "-")
         
         database.child(safeEmail).observeSingleEvent(of: .value, with: { snapshot in
-            guard snapshot.value as? String != nil else {
+            guard snapshot.value as? [String: Any] != nil else {
                 completion(false)
                 return
             }
@@ -98,7 +100,9 @@ extension DatabaseManager {
     
     public func getAllUsers(completion: @escaping (Result<[[String: String]], Error>) -> Void) {
         database.child("users").observeSingleEvent(of: .value, with: { snapshot in
+            
             guard let value = snapshot.value as? [[String: String]] else {
+                
                 completion(.failure(DatabaseError.failedToFetch))
                 return
             }
@@ -126,6 +130,7 @@ extension DatabaseManager {
     public func createNewConversation(with otherUserEmail: String, name: String, firstMessage: Message, completion: @escaping (Bool) -> Void) {
         guard let currentEmail = UserDefaults.standard.value(forKey: "email") as? String,
         let currentName = UserDefaults.standard.value(forKey: "name") as? String else {
+            print("Failed getting user defaults")
             return
         }
         let safeEmail = DatabaseManager.safeEmail(currentEmail)
@@ -537,6 +542,43 @@ extension DatabaseManager {
                             })
                         })
                     })
+                })
+            }
+        })
+    }
+    
+    public func deleteConversation(conversationId: String, completion: @escaping (Bool) -> Void) {
+        guard let email = UserDefaults.standard.value(forKey: "email") as? String else {
+            return
+        }
+        let safeEmail = DatabaseManager.safeEmail(email)
+        
+        print("Deleting conversation with id: \(conversationId)")
+        
+        // Get all conversations for current user
+        // delete conversation in collection with target id
+        // reset those conversations for the user in the database
+        let ref = database.child("\(safeEmail)/conversations")
+            ref.observeSingleEvent(of: .value, with: {snapshot in
+            if var conversations = snapshot.value as? [[String: Any]] {
+                var positionToRemove = 0
+                for conversation in conversations {
+                    if let id = conversation["id"] as? String,
+                       id == conversationId {
+                         print("found convo to delete")
+                        break
+                    }
+                    positionToRemove += 1
+                }
+                conversations.remove(at: positionToRemove)
+                ref.setValue(conversations, withCompletionBlock: {
+                    error, _ in
+                    guard error == nil else {
+                        completion(false)
+                        return
+                    }
+                    print("deleted conversations")
+                    completion(true)
                 })
             }
         })

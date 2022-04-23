@@ -104,6 +104,9 @@ extension ProfileViewController: UITableViewDelegate, UITableViewDataSource {
             // Google Logout
             GIDSignIn.sharedInstance.signOut()
             
+            UserDefaults.standard.setValue(nil, forKey: "email")
+            UserDefaults.standard.setValue(nil, forKey: "name")
+            
             do {
                 try FirebaseAuth.Auth.auth().signOut()
                 

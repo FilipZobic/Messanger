@@ -48,15 +48,16 @@ class LoginViewController: UIViewController {
             let emailAddress = profile.email
             let fullName = profile.name
             UserDefaults.standard.set(emailAddress, forKey: "email")
+            
+            
+            guard let firstName = profile.givenName,
+                  let lastName = profile.familyName else {
+                      return
+                  }
+            UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
             DatabaseManager.shared.userExists(with: emailAddress, completion: {exists in
                 if !exists {
                     print("User does not exist")
-                    
-                    guard let firstName = profile.givenName,
-                          let lastName = profile.familyName else {
-                              return
-                          }
-                    UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
                     let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: emailAddress)
                     DatabaseManager.shared.insertUser(with: chatUser, completion: {success in
                         if success {
@@ -98,6 +99,7 @@ class LoginViewController: UIViewController {
                     print("Failed loggin in with google credentials")
                     return
                 }
+                NotificationCenter.default.post(name: .didLogInNotification, object: nil)
                 print("Signed in with google")
                 strongSelf.navigationController?.dismiss(animated: true, completion: nil)
             })
@@ -255,12 +257,15 @@ class LoginViewController: UIViewController {
             let user = result.user
             
             let safeEmail = DatabaseManager.safeEmail(email)
+            print(safeEmail)
             DatabaseManager.shared.getDataFor(path: safeEmail, completion: { [weak self] result in
                 switch result {
                 case .success(let data):
+                    print(data)
                     guard let userData = data as? [String: Any],
                     let firstName = userData["first_name"] as? String,
                     let lastName = userData["last_name"] as? String else {
+                        print("Failed getting user defaults user data")
                         return
                     }
                     UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
@@ -272,6 +277,7 @@ class LoginViewController: UIViewController {
             UserDefaults.standard.set(email, forKey: "email")
             
             print("Logged In User: \(user)")
+            NotificationCenter.default.post(name: .didLogInNotification, object: nil)
             strongSelf.navigationController?.dismiss(animated: true, completion: nil)
         })
     }
@@ -362,6 +368,7 @@ extension LoginViewController: LoginButtonDelegate {
                                     switch result {
                                     case .success(let downloadUrl):
                                         UserDefaults.standard.set(downloadUrl, forKey: "profile_picture_url")
+//                                        NotificationCenter.default.post(name: .didLogInNotification, object: nil)
                                         print(downloadUrl)
                                     case .failure(let error):
                                         print("Error: \(error)")
@@ -385,6 +392,7 @@ extension LoginViewController: LoginButtonDelegate {
                 }
                 
                 print("Logged in facebook user")
+                NotificationCenter.default.post(name: .didLogInNotification, object: nil)
                 strongSelf.navigationController?.dismiss(animated: true, completion: nil)
             })
         })
