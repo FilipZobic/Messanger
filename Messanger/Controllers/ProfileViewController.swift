@@ -47,14 +47,14 @@ class ProfileViewController: UIViewController {
                     return
                 }
                 
-                // Logout facebook
+                UserDefaults.standard.setValue(nil, forKey: "email")
+                UserDefaults.standard.setValue(nil, forKey: "name")
+                
+                // Logout facebooks
                 FBSDKLoginKit.LoginManager().logOut()
                 
                 // Google Logout
                 GIDSignIn.sharedInstance.signOut()
-                
-                UserDefaults.standard.setValue(nil, forKey: "email")
-                UserDefaults.standard.setValue(nil, forKey: "name")
                 
                 do {
                     try FirebaseAuth.Auth.auth().signOut()
