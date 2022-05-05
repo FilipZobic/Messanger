@@ -13,62 +13,7 @@ import AVFoundation
 import AVKit
 import CoreLocation
 
-struct Message: MessageType {
-    public var sender: SenderType
-    public var messageId: String
-    public var sentDate: Date
-    public var kind: MessageKind
-}
-
-struct Location: LocationItem {
-    var location: CLLocation
-    var size: CGSize
-    
-}
-
-extension MessageKind {
-    var messageKindString: String {
-        switch self {
-            
-        case .text(_):
-            return "text"
-        case .attributedText(_):
-            return "attributed_text"
-        case .photo(_):
-            return "photo"
-        case .video(_):
-            return "video"
-        case .location(_):
-            return "location"
-        case .emoji(_):
-            "emoji"
-        case .audio(_):
-            return "audio"
-        case .contact(_):
-            "contact"
-        case .linkPreview(_):
-            "link_preview"
-        case .custom(_):
-            "custom"
-        }
-        return "custom"
-    }
-}
-
-struct Sender: SenderType {
-    public var photoURL: String
-    public var senderId: String
-    public var displayName: String
-}
-
-struct Media: MediaItem {
-    var url: URL?
-    var image: UIImage?
-    var placeholderImage: UIImage
-    var size: CGSize
-}
-
-class ChatViewController: MessagesViewController {
+final class ChatViewController: MessagesViewController {
     
     private var senderPhotoUrl: URL?
     private var otherUserPhotoUrl: URL?
@@ -537,7 +482,7 @@ extension ChatViewController: MessageCellDelegate {
                 return
             }
             let vc = PhotoViewerViewController(with: imageUrl)
-            self.navigationController?.pushViewController(vc, animated: true)
+            navigationController?.pushViewController(vc, animated: true)
         case .video(let media):
             guard let videUrl = media.url else {
                 return
@@ -564,7 +509,7 @@ extension ChatViewController: MessageCellDelegate {
             let coordinates = locationData.location.coordinate
             let vc = LocationPickerViewController(coordinates: coordinates)
             vc.title = "Location"
-            self.navigationController?.pushViewController(vc, animated: true)
+            navigationController?.pushViewController(vc, animated: true)
         default:
             break
         }

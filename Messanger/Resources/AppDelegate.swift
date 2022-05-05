@@ -22,11 +22,6 @@ func application(
         application,
         didFinishLaunchingWithOptions: launchOptions
     )
-//    GIDSignIn.sharedInstance()?.clientID = FirebaseApp.app()?.options.clientID
-//    GIDSignIn.sharedInstance()?.delegate = self
-
-    
-    
     return true
 }
       
@@ -43,22 +38,5 @@ func application(
         )
         return GIDSignIn.sharedInstance.handle(url)
     }
-    
-//    func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error!) {
-//        guard error == nil else {
-//            return
-//        }
-//
-//        guard let authentication = user.authentication else { return }
-//
-//        let credential = GoogleAuthProvider.credential(withIDToken: authentication.idToken, accessToken: authentication.accessToken)
-//
-//
-//    }
-//
-//    func sign(_ signIn: GIDSignIn!, didDisconnectNotificationWith user: GIDGoogleUser!, withError error: Error!) {
-//
-//    }
-    
 }
 
